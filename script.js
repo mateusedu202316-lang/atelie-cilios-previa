@@ -4,9 +4,9 @@
 
   // Valores da Mara: troque null pelo número (app = aplicação, m15 = até 15 dias, m21 = 16 a 21 dias).
   const TECH = [
-    { name: "Natural", app: null, m15: null, m21: null },
-    { name: "Médio", app: null, m15: null, m21: null },
-    { name: "Volume", app: null, m15: null, m21: null },
+    { name: "Fio a fio clássico", app: null, m15: null, m21: null },
+    { name: "Efeito molhado", app: null, m15: null, m21: null },
+    { name: "Mega volume", app: null, m15: null, m21: null },
   ];
   const SERVICES = [
     { name: "Cílios", desc: "Um olhar mais presente, no efeito que combina com você." },
@@ -200,7 +200,7 @@
       }
       result.dataset.zone = zone;
       if (price !== shown || price == null) countTo(price);
-      const what = zone === "new" ? `uma aplicação nova de cílios, efeito ${t.name}` : `a manutenção dos cílios, efeito ${t.name} (aplicação há ${d} ${d === 1 ? "dia" : "dias"})`;
+      const what = zone === "new" ? `uma aplicação nova de cílios: ${t.name}` : `a manutenção dos cílios: ${t.name} (aplicação há ${d} ${d === 1 ? "dia" : "dias"})`;
       setWa(cta, `Oi, Mara! Quero agendar ${what} ✨`);
     };
     chips.forEach(c => c.addEventListener("click", () => {
@@ -248,7 +248,7 @@
       if (reduced) return;
       const r = quiz.getBoundingClientRect(), o = origin.getBoundingClientRect();
       const cx = o.left - r.left + o.width / 2, cy = o.top - r.top + o.height / 2;
-      const colors = ["#B99A68", "#EBCBD0", "#702C3B"];
+      const colors = ["#C4A15D", "#EACFD4", "#732F46"];
       for (let i = 0; i < 22; i++) {
         const s = document.createElement("span");
         s.className = "burst";
