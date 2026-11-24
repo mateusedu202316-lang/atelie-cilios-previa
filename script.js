@@ -1,121 +1,462 @@
 (() => {
-  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const clamp = v => Math.min(1, Math.max(0, v)), mix = (a, b, t) => a + (b - a) * t, ease = t => t * t * (3 - 2 * t);
+  const WHATSAPP = "5511992490643";
+  const WA_MSG = "Oi, Mara! Vim pelo site e quero fazer meu agendamento ✨";
 
-  // Abertura: um olho fechado que se abre ao rolar; os cílios acompanham o cursor ou o dedo.
-  const hero = $(".hero"), cv = $(".stage canvas"), c = cv.getContext("2d"), txt = $(".hero-text"), end = $(".hero-end");
-  let vw, vh, tx = 0, ty = 0, mx = 0, my = 0, last = "";
-  const size = () => {
-    const d = Math.min(devicePixelRatio || 1, 2);
-    vw = cv.clientWidth; vh = cv.clientHeight; cv.width = vw * d; cv.height = vh * d; c.setTransform(d, 0, 0, d, 0, 0); last = "";
+  // Valores da Mara: troque null pelo número (app = aplicação, m15 = até 15 dias, m21 = 16 a 21 dias).
+  const TECH = [
+    { name: "Natural", app: null, m15: null, m21: null },
+    { name: "Médio", app: null, m15: null, m21: null },
+    { name: "Volume", app: null, m15: null, m21: null },
+  ];
+  const SERVICES = [
+    { name: "Cílios", desc: "Um olhar mais presente, no efeito que combina com você." },
+    { name: "Sobrancelhas", desc: "Um desenho que valoriza os seus traços e emoldura o rosto." },
+    { name: "Maquiagem", desc: "Uma produção completa, do seu jeito e pra sua ocasião." },
+    { name: "Micropigmentação", desc: "Definição que acompanha você no dia a dia. Começa com uma avaliação." },
+  ];
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const desktop = matchMedia("(min-width: 901px)");
+  const cursorOn = matchMedia("(hover: hover) and (pointer: fine)").matches && !reduced;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const brl = v => v == null ? "R$ a definir" : `R$ ${v},00`;
+  const waLink = msg => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
+
+  /* ---------- links de WhatsApp ---------- */
+  const setWa = (a, msg = WA_MSG) => { a.href = waLink(msg); a.target = "_blank"; a.rel = "noopener"; };
+  $$("[data-wa]").forEach(a => setWa(a, a.dataset.wa || undefined));
+  $$("[data-year]").forEach(el => (el.textContent = new Date().getFullYear()));
+
+  /* ---------- rolagem suave (Lenis) ---------- */
+  const lenis = !reduced && window.Lenis ? new window.Lenis({ duration: 1.15, smoothWheel: true }) : null;
+  const lockScroll = on => {
+    document.body.classList.toggle("is-locked", on);
+    if (lenis) on ? lenis.stop() : lenis.start();
   };
-  const born = performance.now();
-  const draw = now => {
-    if (!still) requestAnimationFrame(draw);
-    const p = still ? 0 : clamp(-hero.getBoundingClientRect().top / (hero.offsetHeight - vh));
-    if (p >= 1 && last === "end") return;
-    const o = still ? 1 : 1 - Math.pow(1 - clamp((now - born - 200) / 1600), 3);
-    mx += (tx - mx) * .08; my += (ty - my) * .08;
-    const key = [p.toFixed(4), o.toFixed(3), mx.toFixed(3), my.toFixed(3)].join();
-    if (key === last) return;
-    last = p >= 1 ? "end" : key;
-    const t = ease(clamp((p - .08) / .72));
-    const w = mix(Math.min(vw * .4, vh * .42), Math.min(vw * .43, vh * .37), t), cx = vw / 2, cy = mix(vh * .68, Math.max(84 + w * 1.1, vw < vh ? vh * .47 : 0), t);
-    const low = w * .42, up = mix(low, -w * .72, t);
-    const at = (u, d) => [cx - w + 2 * w * u, cy + 4 * u * (1 - u) * d / 1];
-    const lid = d => { c.beginPath(); c.moveTo(cx - w, cy); c.quadraticCurveTo(cx, cy + 2 * d, cx + w, cy); };
-    c.clearRect(0, 0, vw, vh);
-    c.lineCap = "round"; c.strokeStyle = "#b99a68"; c.fillStyle = "#b99a68";
-    if (t > 0) {
-      c.save(); lid(up); c.quadraticCurveTo(cx, cy + 2 * low, cx - w, cy); c.clip();
-      c.fillStyle = "#f9f5ef"; c.fillRect(cx - w, cy - w, 2 * w, 2 * w);
-      const ix = cx + mx * w * .12, iy = cy - w * .08 + my * w * .06, r = w * .4;
-      c.fillStyle = "#4a2a1a"; c.beginPath(); c.arc(ix, iy, r, 0, 7); c.fill();
-      c.lineWidth = 1.4;
-      for (let i = 0; i < 72; i++) { const a = i / 72 * 6.2832, k = .55 + .4 * Math.abs(Math.sin(i * 12.9)); c.beginPath(); c.moveTo(ix + Math.cos(a) * r * .46, iy + Math.sin(a) * r * .46); c.lineTo(ix + Math.cos(a) * r * k, iy + Math.sin(a) * r * k); c.stroke(); }
-      c.fillStyle = "#1a0a0c"; c.beginPath(); c.arc(ix, iy, r * .44, 0, 7); c.fill();
-      c.fillStyle = "#fff"; c.beginPath(); c.arc(ix + r * .3, iy - r * .34, r * .13, 0, 7); c.fill();
-      c.restore();
-      c.lineWidth = 2; c.globalAlpha = t; lid(low); c.stroke(); c.globalAlpha = 1;
-    }
-    c.fillStyle = c.strokeStyle = "#e9ddcb"; c.lineWidth = Math.max(3, w * .012); lid(up); c.stroke();
-    const N = 37, dir = mix(1, -1, t), th = Math.max(2, w * .0085);
-    for (let i = 0; i < N; i++) {
-      const u = .04 + .92 * i / (N - 1), [x, y] = at(u, up);
-      const grow = clamp(o * 1.6 - Math.abs(u - .5) * 1.1);
-      const L = w * .36 * (.62 + .38 * Math.sin(u * 3.1416)) * grow * (i % 2 ? .86 : 1);
-      const sx = (u - .5) * 1.25 + mx * .32, ex = x + sx * L * 1.15, ey = y + dir * L * (1 + my * .12);
-      const qx = x + sx * L * .25, qy = y + dir * L * .72;
-      c.beginPath(); c.moveTo(x - th, y); c.quadraticCurveTo(qx - th * .5, qy, ex, ey); c.quadraticCurveTo(qx + th * .5, qy, x + th, y); c.fill();
-    }
-    txt.style.opacity = 1 - clamp(p / .2); txt.style.visibility = p > .2 ? "hidden" : "";
-    end.style.opacity = clamp((p - .68) / .18);
-  };
-  size(); requestAnimationFrame(draw);
-  addEventListener("resize", () => { size(); if (still) draw(0); });
-  addEventListener("pointermove", e => { tx = e.clientX / innerWidth * 2 - 1; ty = e.clientY / innerHeight * 2 - 1; }, { passive: true });
-
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("on"); io.unobserve(e.target); } }), { threshold: .2 });
-  $$("[data-rise]").forEach(e => io.observe(e));
-
-  const svcs = $$(".svc");
-  svcs.forEach(s => s.querySelector("h3 button").addEventListener("click", () => {
-    svcs.forEach(x => { const on = x === s; x.classList.toggle("on", on); x.querySelector("h3 button").setAttribute("aria-expanded", on); });
-    if (innerWidth <= 820) s.scrollIntoView({ behavior: still ? "auto" : "smooth" });
+  $$('a[href^="#"]').forEach(a => a.addEventListener("click", e => {
+    const id = a.getAttribute("href");
+    if (id.length < 2) return;
+    const target = document.querySelector(id);
+    if (!target) return;
+    e.preventDefault();
+    if (lenis) lenis.scrollTo(target, { duration: 1.5 });
+    else target.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
   }));
 
-  // Rosto ilustrado.
-  const face = $(".face");
-  let r = 7; const rnd = () => (r = r * 16807 % 2147483647) / 2147483647;
-  let curls = "";
-  for (let i = 0; i < 150; i++) {
-    const a = Math.PI * (1.02 + .96 * rnd()), k = 1 + rnd() * .3;
-    const x = 300 + Math.cos(a) * 285 * k, y = 350 + Math.sin(a) * 335 * k, q = 13 + rnd() * 20;
-    curls += `<circle cx="${x}" cy="${y}" r="${q}" fill="${rnd() > .5 ? "#1d1113" : "#2a191a"}" stroke="#4a2e2b" stroke-width="1.6"/>`;
+  /* ---------- intro ---------- */
+  const intro = $(".intro");
+  if (reduced) {
+    document.documentElement.style.setProperty("--hero-delay", "0s");
+    intro.remove();
+  } else {
+    lenis?.stop();
+    requestAnimationFrame(() => $(".intro__lash").classList.add("is-drawn"));
+    setTimeout(() => {
+      intro.classList.add("is-done");
+      lenis?.start();
+      setTimeout(() => intro.remove(), 1100);
+    }, 1050);
   }
-  let lashes = "", hairs = "";
-  for (let i = 0; i < 15; i++) {
-    const u = .05 + .9 * i / 14, x = 95 + 165 * u, y = 292 + 4 * u * (1 - u) * 36, s = (u - .62) * 60;
-    lashes += `<path data-x="${x}" data-y="${y}" data-s="${s}" data-i="${i}"/>`;
-  }
-  for (let i = 0; i < 22; i++) {
-    const u = i / 21, x = 262 - 178 * u, y = 226 - 62 * Math.sin(u * 2.35) + (u > .75 ? (u - .75) * 60 : 0);
-    hairs += `<path d="M${x} ${y + 12 - 8 * u}q${-6 - 10 * u} ${-12 + 14 * u} ${-16 - 4 * u} ${-20 + 22 * u}"/>`;
-  }
-  const half = `<path class="shadow" d="M84 290Q130 218 190 216Q245 222 268 292Q180 360 84 290Z" filter="url(#b1)"/>
-    <path class="browfill" d="M272 214Q210 166 148 160Q104 166 66 208Q112 182 148 183Q210 194 270 238Q277 226 272 214Z"/><g class="hairs" fill="none" stroke="#1d1113" stroke-width="2" stroke-linecap="round">${hairs}</g>
-    <path d="M110 268Q178 226 248 270" fill="none" stroke="#1d0d0a" stroke-opacity=".35" stroke-width="2.5"/>
-    <path d="M95 292Q177.500 364 260 292" fill="none" stroke="#1d1113" stroke-width="5" stroke-linecap="round"/><g class="lashes" fill="none" stroke="#1d1113" stroke-linecap="round">${lashes}</g>
-    <ellipse class="blush" cx="112" cy="420" rx="70" ry="44" fill="#a3293f" opacity=".22" filter="url(#b2)"/>
-    <path d="M258 440Q262 468 284 462Q292 470 300 470" fill="none" stroke="#1d0d0a" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/>`;
-  face.innerHTML = `<defs><filter id="b1" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="9"/></filter><filter id="b2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="24"/></filter></defs>
-    <path class="skin" d="M22 260C22 60 150 8 300 8S578 60 578 260C578 480 470 690 300 690S22 480 22 260Z"/>${curls}<g>${half}</g><g transform="translate(600 0) scale(-1 1)">${half}</g>
-    <g class="lips"><path d="M212 552Q262 520 284 523Q300 532 316 523Q338 520 388 552Q345 560 300 557Q255 560 212 552Z"/><path d="M212 553Q255 562 300 560Q345 562 388 553Q352 606 300 606Q248 606 212 553Z"/></g><path d="M212 552Q255 562 300 559Q345 562 388 552" fill="none" stroke="#1d0d0a" stroke-opacity=".55" stroke-width="2.500"/><path d="M262 584Q300 592 338 584" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="5" stroke-linecap="round"/>`;
-  const st = {}, all = (s, f) => face.querySelectorAll(s).forEach(f);
-  const natural = { "#8d5a3f": "#7d4038", "#5d3726": "#5a2a2a", "#b98262": "#a75f55", "#e6bfa3": "#cf8d84" };
-  const paint = () => {
-    all(".skin", e => e.setAttribute("fill", st.skin));
-    all(".lips", e => e.setAttribute("fill", st.lip === "none" ? natural[st.skin] : st.lip));
-    all(".shadow", e => { if (st.shadow !== "none") e.setAttribute("fill", st.shadow); e.setAttribute("opacity", st.shadow === "none" ? 0 : .85); });
-    all(".browfill", e => { e.setAttribute("fill", "#1d1113"); e.setAttribute("opacity", [.12, .5, .88][st.brow]); });
-    all(".hairs", e => e.setAttribute("opacity", [.5, .9, .6][st.brow]));
-    const L = [22, 36, 44][st.lash];
-    all(".lashes path", e => {
-      const { x, y, s, i } = e.dataset, k = L * (i % 2 ? .86 : 1), d = +s * L / 36;
-      e.setAttribute("d", `M${x} ${y}q${d * .1} ${k * .8} ${d} ${k}`); e.setAttribute("stroke-width", [1.8, 2.4, 4.4][st.lash]);
-    });
+
+  /* ---------- título do hero letra por letra ---------- */
+  $$("[data-split]").forEach(el => {
+    el.innerHTML = [...el.textContent].map((c, i) => `<span class="ch" style="--i:${i}" aria-hidden="true">${c}</span>`).join("");
+  });
+  setTimeout(() => $(".hero__lash").classList.add("is-drawn"), reduced ? 0 : 1650);
+
+  /* ---------- leques das técnicas (Y, W, 4D, 6D...) ---------- */
+  const makeFan = n => {
+    const spread = Math.min(16 * (n - 1), 78);
+    let lines = "";
+    for (let i = 0; i < n; i++) {
+      const a = n === 1 ? 0 : -spread / 2 + (spread / (n - 1)) * i;
+      const rad = (a * Math.PI) / 180;
+      const len = 78 - Math.abs(a) * 0.25;
+      const x = 50 + Math.sin(rad) * len, y = 92 - Math.cos(rad) * len;
+      lines += `<line x1="50" y1="92" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" style="--r:${(a / 6).toFixed(1)}deg"/>`;
+    }
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">${lines}<circle cx="50" cy="92" r="6"/></svg>`;
   };
-  const opts = $$("[data-g]");
-  const set = b => { st[b.dataset.g] = b.dataset.v; opts.filter(x => x.dataset.g === b.dataset.g).forEach(x => x.setAttribute("aria-pressed", x === b)); };
-  opts.forEach(b => { if (b.getAttribute("aria-pressed") === "true") set(b); b.addEventListener("click", () => { set(b); paint(); }); });
-  ["lash:2", "brow:1", "shadow:#b99a68", "lip:#a3293f"].forEach(k => { const [g, v] = k.split(":"); set(opts.find(b => b.dataset.g === g && b.dataset.v === v)); });
-  paint();
-  $(".surprise").addEventListener("click", () => {
-    ["lash", "brow", "shadow", "lip"].forEach(g => { const l = opts.filter(b => b.dataset.g === g && b.getAttribute("aria-pressed") !== "true"); set(l[Math.floor(Math.random() * l.length)]); });
-    paint();
+  $$("[data-fan]").forEach(box => (box.innerHTML = makeFan(+box.dataset.fan)));
+
+  /* ---------- manifesto: separa em palavras ---------- */
+  const scrubWords = [];
+  $$("[data-scrub]").forEach(p => {
+    const label = p.textContent;
+    const frag = document.createDocumentFragment();
+    p.childNodes.forEach(node => {
+      const pink = node.nodeType === 1;
+      node.textContent.split(/(\s+)/).forEach(part => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { frag.append(" "); return; }
+        const w = document.createElement("span");
+        w.className = pink ? "w w--pink" : "w";
+        w.textContent = part;
+        frag.append(w);
+        scrubWords.push(w);
+      });
+    });
+    p.replaceChildren(frag);
+    p.setAttribute("aria-label", label);
+  });
+  const scrubEl = $("[data-scrub]");
+  if (reduced) scrubWords.forEach(w => w.classList.add("is-lit"));
+
+  /* ---------- reveal ao rolar ---------- */
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      e.target.classList.add(e.target.classList.contains("lash--draw") ? "is-drawn" : "is-in");
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+  $$("[data-reveal], .lash--draw:not(.hero__lash):not(.intro__lash)").forEach(el => io.observe(el));
+
+  /* ---------- nav: menu mobile ---------- */
+  const nav = $(".nav"), burger = $(".nav__burger"), menu = $(".menu");
+  const setMenu = open => {
+    menu.classList.toggle("is-open", open);
+    nav.classList.toggle("menu-open", open);
+    burger.setAttribute("aria-expanded", open);
+    burger.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
+    menu.setAttribute("aria-hidden", !open);
+    lockScroll(open);
+  };
+  burger.addEventListener("click", () => setMenu(!menu.classList.contains("is-open")));
+  $$("a", menu).forEach(a => a.addEventListener("click", () => setMenu(false)));
+  addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (menu.classList.contains("is-open")) setMenu(false);
+    closeLightbox();
   });
 
-  const cmp = $(".cmp");
-  cmp.querySelector("input").addEventListener("input", e => cmp.style.setProperty("--x", e.target.value + "%"));
+  const navLinks = $$(".nav__links a");
+  const secIO = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      navLinks.forEach(a => a.classList.toggle("is-current", a.getAttribute("href") === "#" + e.target.id));
+    });
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  $$("main section[id]").forEach(s => secIO.observe(s));
+
+  /* ---------- abas de valores ---------- */
+  const tabs = $$(".tabs [role=tab]"), pill = $(".tabs__pill");
+  const movePill = btn => { pill.style.width = btn.offsetWidth + "px"; pill.style.transform = `translateX(${btn.offsetLeft}px)`; };
+  const selectTab = btn => {
+    tabs.forEach(t => {
+      const on = t === btn;
+      t.setAttribute("aria-selected", on);
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+    });
+    movePill(btn);
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => selectTab(t));
+    t.addEventListener("keydown", e => {
+      const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (!dir) return;
+      const next = tabs[(i + dir + tabs.length) % tabs.length];
+      next.focus(); selectTab(next);
+    });
+  });
+  const syncPill = () => movePill($(".tabs [aria-selected=true]"));
+  document.fonts?.ready.then(syncPill);
+  addEventListener("resize", syncPill);
+  syncPill();
+
+  /* ---------- calculadora de manutenção ---------- */
+  const calc = $(".calc");
+  if (calc) {
+    const chips = $$(".calc__chips button", calc), range = $(".calc__range", calc);
+    const daysOut = $(".calc__days", calc), result = $(".calc__result", calc);
+    const badge = $(".calc__badge", calc), priceEl = $(".calc__price", calc), tip = $(".calc__tip", calc), cta = $(".calc__cta", calc);
+    let tech = 0, shown = null, countRaf = 0;
+
+    const countTo = to => {
+      cancelAnimationFrame(countRaf);
+      if (reduced || to == null || shown == null) { shown = to; priceEl.textContent = brl(to); return; }
+      const from = shown, start = performance.now();
+      const step = now => {
+        const p = clamp((now - start) / 450, 0, 1);
+        shown = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+        priceEl.textContent = brl(shown);
+        if (p < 1) countRaf = requestAnimationFrame(step);
+      };
+      countRaf = requestAnimationFrame(step);
+    };
+
+    const update = () => {
+      const d = +range.value, t = TECH[tech];
+      daysOut.textContent = d === 1 ? "1 dia" : `${d} dias`;
+      let zone, price;
+      if (d <= 15) { zone = "best"; price = t.m15; badge.textContent = "Manutenção até 15 dias"; tip.textContent = "Você está no melhor prazo! ✨"; }
+      else if (d <= 21) { zone = "mid"; price = t.m21; badge.textContent = "Manutenção 16 a 21 dias"; tip.textContent = "Ainda dá tempo de fazer manutenção, corre!"; }
+      else { zone = "new"; price = t.app; badge.textContent = "Aplicação nova"; tip.textContent = "Depois de 21 dias o valor é de aplicação nova."; }
+      if (result.dataset.zone !== zone) {
+        priceEl.classList.remove("is-bump"); void priceEl.offsetWidth; priceEl.classList.add("is-bump");
+      }
+      result.dataset.zone = zone;
+      if (price !== shown || price == null) countTo(price);
+      const what = zone === "new" ? `uma aplicação nova de cílios, efeito ${t.name}` : `a manutenção dos cílios, efeito ${t.name} (aplicação há ${d} ${d === 1 ? "dia" : "dias"})`;
+      setWa(cta, `Oi, Mara! Quero agendar ${what} ✨`);
+    };
+    chips.forEach(c => c.addEventListener("click", () => {
+      tech = +c.dataset.tech;
+      chips.forEach(x => x.setAttribute("aria-checked", x === c));
+      update();
+    }));
+    range.addEventListener("input", update);
+    update();
+  }
+
+  /* ---------- quiz: qual técnica é a sua? ---------- */
+  const quiz = $(".quiz__card");
+  if (quiz) {
+    const QUESTIONS = [
+      { q: "O que você quer realçar?", opts: [["Os cílios", 0], ["As sobrancelhas", 1], ["O rosto todo", 2]] },
+      { q: "Quanto tempo quer que dure?", opts: [["Só pra uma ocasião", 2], ["Algumas semanas", 0], ["O máximo possível", 3]] },
+      { q: "Como é o seu dia a dia?", opts: [["Corrido, quero acordar pronta", 3], ["Amo me produzir", 2], ["Gosto do natural", 1]] },
+    ];
+    const stage = $(".quiz__stage", quiz), bar = $(".quiz__bar span", quiz), count = $(".quiz__count", quiz);
+    let step = 0, picks = [];
+
+    const swap = html => {
+      const go = () => {
+        stage.innerHTML = html;
+        stage.classList.remove("quiz__anim-out");
+        stage.classList.add("quiz__anim-in");
+        stage.addEventListener("animationend", () => stage.classList.remove("quiz__anim-in"), { once: true });
+        bindStage();
+      };
+      if (reduced || !stage.innerHTML) return go();
+      stage.classList.add("quiz__anim-out");
+      setTimeout(go, 280);
+    };
+
+    const renderQuestion = () => {
+      const { q, opts } = QUESTIONS[step];
+      count.innerHTML = `Pergunta <b>${step + 1}</b> de ${QUESTIONS.length}`;
+      bar.style.width = `${(step / QUESTIONS.length) * 100}%`;
+      swap(`<h3 class="quiz__q">${q}</h3><div class="quiz__opts">${opts.map(([label, v], i) =>
+        `<button class="quiz__opt" data-v="${v}"><i>${"ABCD"[i]}</i>${label}</button>`).join("")}</div>`);
+    };
+
+    const burst = origin => {
+      if (reduced) return;
+      const r = quiz.getBoundingClientRect(), o = origin.getBoundingClientRect();
+      const cx = o.left - r.left + o.width / 2, cy = o.top - r.top + o.height / 2;
+      const colors = ["#B99A68", "#EBCBD0", "#702C3B"];
+      for (let i = 0; i < 22; i++) {
+        const s = document.createElement("span");
+        s.className = "burst";
+        s.style.cssText = `left:${cx}px;top:${cy}px;background:${colors[i % 3]}`;
+        quiz.append(s);
+        const ang = Math.random() * Math.PI * 2, dist = 80 + Math.random() * 160;
+        s.animate([
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1 },
+          { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist}px)) scale(.3)`, opacity: 0 },
+        ], { duration: 900 + Math.random() * 400, easing: "cubic-bezier(.16,1,.3,1)" }).onfinish = () => s.remove();
+      }
+    };
+
+    const renderResult = () => {
+      const votes = [0, 0, 0, 0];
+      picks.forEach((v, i) => (votes[v] += i ? 1 : 2));
+      const best = picks[0] === 1 && votes[3] === 2 ? 3 : votes.indexOf(Math.max(...votes));
+      const t = SERVICES[best];
+      count.innerHTML = "Resultado";
+      bar.style.width = "100%";
+      swap(`<div class="quiz__result">
+          <div class="tcard__fan">${makeFan(5)}</div>
+          <p class="note">combina com você...</p>
+          <h3 class="quiz__name">${t.name}</h3>
+          <p class="quiz__desc">${t.desc}</p>
+          <div class="quiz__actions">
+            <a class="tag" href="${waLink(`Oi, Mara! Fiz o teste no site e deu ${t.name}. Quero agendar ✨`)}" target="_blank" rel="noopener">Quero agendar!</a>
+            <button class="quiz__redo">Refazer teste ↺</button>
+          </div>
+        </div>`);
+      setTimeout(() => burst($(".quiz__name", quiz) || quiz), reduced ? 0 : 420);
+    };
+
+    function bindStage() {
+      $$(".quiz__opt", stage).forEach(btn => btn.addEventListener("click", () => {
+        btn.classList.add("is-picked");
+        picks.push(+btn.dataset.v);
+        step++;
+        setTimeout(() => (step < QUESTIONS.length ? renderQuestion() : renderResult()), reduced ? 0 : 220);
+      }));
+      $(".quiz__redo", stage)?.addEventListener("click", () => { step = 0; picks = []; renderQuestion(); });
+      $$(".tag", stage).forEach(enableMagnet);
+    }
+    renderQuestion();
+  }
+
+  /* ---------- lightbox ---------- */
+  const lb = $(".lightbox"), lbImg = $("img", lb);
+  let lastFocus = null;
+  function closeLightbox() {
+    if (lb.hidden) return;
+    lb.classList.remove("is-open");
+    setTimeout(() => { lb.hidden = true; }, 300);
+    lockScroll(false);
+    lastFocus?.focus();
+  }
+  $$("[data-full]").forEach(btn => btn.addEventListener("click", () => {
+    lastFocus = btn;
+    lbImg.src = btn.dataset.full;
+    lbImg.alt = btn.getAttribute("aria-label").replace("Ampliar foto: ", "");
+    lb.hidden = false;
+    lockScroll(true);
+    requestAnimationFrame(() => lb.classList.add("is-open"));
+    $(".lightbox__close").focus();
+  }));
+  lb.addEventListener("click", e => { if (e.target !== lbImg) closeLightbox(); });
+
+  /* ---------- PC: cursor, botões magnéticos e cards 3D ---------- */
+  const cursor = $(".cursor");
+  const mouse = { x: innerWidth / 2, y: innerHeight / 2 }, ring = { x: mouse.x, y: mouse.y };
+
+  function enableMagnet(el) {
+    if (!cursorOn || el.dataset.magnet !== undefined) return;
+    el.dataset.magnet = "";
+    el.addEventListener("mousemove", e => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${(e.clientX - r.left - r.width / 2) * 0.28}px`);
+      el.style.setProperty("--my", `${(e.clientY - r.top - r.height / 2) * 0.4}px`);
+    });
+    el.addEventListener("mouseleave", () => { el.style.setProperty("--mx", "0px"); el.style.setProperty("--my", "0px"); });
+  }
+
+  if (cursorOn) {
+    document.documentElement.classList.add("has-cursor");
+    const dot = $(".cursor__dot"), ringEl = $(".cursor__ring");
+    addEventListener("mousemove", e => {
+      mouse.x = e.clientX; mouse.y = e.clientY;
+      dot.style.transform = `translate3d(${mouse.x}px, ${mouse.y}px, 0)`;
+      cursor.classList.remove("is-hidden");
+    });
+    document.addEventListener("mouseleave", () => cursor.classList.add("is-hidden"));
+    document.addEventListener("mouseover", e => {
+      const view = e.target.closest("[data-cursor='ver']");
+      cursor.classList.toggle("is-view", !!view);
+      cursor.classList.toggle("is-link", !view && !!e.target.closest("a, button, input, label"));
+    });
+    cursor.ring = ringEl;
+
+    $$(".tag, .fab, .link-arrow").forEach(enableMagnet);
+
+    const tilt = (el, max, lift = 0) => {
+      el.addEventListener("mousemove", e => {
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.transform = `perspective(900px) rotateX(${(-py * max).toFixed(2)}deg) rotateY(${(px * max).toFixed(2)}deg) translateY(${lift}px)`;
+      });
+      el.addEventListener("mouseleave", () => { el.style.transform = ""; });
+    };
+    $$(".tcard:not(.tcard--cta)").forEach(c => tilt(c, 12, -10));
+    tilt($(".hero__media"), 8);
+  }
+
+  /* ---------- técnicas: scroll horizontal fixado (PC) ---------- */
+  const tech = $(".tech"), track = $(".tech__track"), viewport = $(".tech__viewport");
+  let techDist = 0;
+  const layoutTech = () => {
+    if (desktop.matches && !reduced) {
+      techDist = Math.max(0, track.scrollWidth - viewport.clientWidth);
+      tech.style.height = innerHeight + techDist + "px";
+    } else {
+      techDist = 0;
+      tech.style.height = "";
+      track.style.transform = "";
+    }
+    lenis?.resize();
+  };
+
+  /* ---------- loop de animação ---------- */
+  const progress = $(".progress span"), fab = $(".fab");
+  const parallaxEls = $$("[data-parallax]").map(el => ({ el, s: +el.dataset.parallax }));
+  const driftEls = $$("[data-drift]").map(el => ({ el, s: +el.dataset.drift }));
+  const floatEls = $$("[data-float]").map((el, i) => ({ el, s: [0.18, -0.12, 0.26, -0.2, 0.14][i % 5] }));
+  const marquees = $$("[data-marquee]").map(m => ({ track: $(".marquee__track", m), dir: +m.dataset.marquee, x: 0 }));
+
+  let lastY = scrollY, velocity = 0, scrollDir = 1, finalVisible = false;
+  new IntersectionObserver(([e]) => { finalVisible = e.isIntersecting; }, { threshold: 0.3 }).observe($("#contato"));
+
+  const inView = r => r.bottom > -200 && r.top < innerHeight + 200;
+
+  function frame(time) {
+    lenis?.raf(time);
+    const y = scrollY, vh = innerHeight;
+    const dy = y - lastY;
+    lastY = y;
+    if (dy) scrollDir = dy > 0 ? 1 : -1;
+    velocity += (Math.abs(dy) - velocity) * 0.15;
+
+    const max = document.documentElement.scrollHeight - vh;
+    progress.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
+
+    nav.classList.toggle("is-solid", y > 30);
+    if (!menu.classList.contains("is-open")) {
+      if (dy > 2 && y > vh * 0.8) nav.classList.add("is-hidden");
+      else if (dy < -2) nav.classList.remove("is-hidden");
+    }
+    fab.classList.toggle("is-visible", y > vh * 0.7 && !finalVisible);
+
+    if (cursorOn && cursor.ring) {
+      ring.x += (mouse.x - ring.x) * 0.18;
+      ring.y += (mouse.y - ring.y) * 0.18;
+      cursor.ring.style.transform = `translate3d(${ring.x.toFixed(1)}px, ${ring.y.toFixed(1)}px, 0)`;
+    }
+
+    if (!reduced) {
+      parallaxEls.forEach(({ el, s }) => {
+        const r = el.parentElement.getBoundingClientRect();
+        if (!inView(r)) return;
+        el.style.transform = `translate3d(0, ${((r.top + r.height / 2 - vh / 2) * s).toFixed(1)}px, 0)`;
+      });
+      driftEls.forEach(({ el, s }) => {
+        const r = el.parentElement.getBoundingClientRect();
+        if (!inView(r)) return;
+        const base = el.classList.contains("final__bgword") ? " translateY(-50%)" : "";
+        el.style.transform = `translate3d(${((r.top + r.height / 2 - vh / 2) * s).toFixed(1)}px, 0, 0)${base}`;
+      });
+      floatEls.forEach(({ el, s }) => {
+        const r = el.parentElement.getBoundingClientRect();
+        if (!inView(r)) return;
+        el.style.transform = `translate3d(0, ${(r.top * s).toFixed(1)}px, 0)`;
+      });
+      marquees.forEach(m => {
+        const half = m.track.scrollWidth / 2;
+        m.x -= (0.6 + Math.min(velocity, 60) * 0.25) * m.dir * scrollDir;
+        if (m.x <= -half) m.x += half;
+        if (m.x > 0) m.x -= half;
+        m.track.style.transform = `translate3d(${m.x.toFixed(1)}px, 0, 0)`;
+      });
+      if (scrubEl) {
+        const r = scrubEl.getBoundingClientRect();
+        if (inView(r)) {
+          const p = clamp((vh * 0.85 - r.top) / (r.height + vh * 0.3), 0, 1);
+          const lit = Math.round(p * scrubWords.length);
+          scrubWords.forEach((w, i) => w.classList.toggle("is-lit", i < lit));
+        }
+      }
+      if (techDist) {
+        const r = tech.getBoundingClientRect();
+        const p = clamp(-r.top / techDist, 0, 1);
+        track.style.transform = `translate3d(${(-p * techDist).toFixed(1)}px, 0, 0)`;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  layoutTech();
+  document.fonts?.ready.then(layoutTech);
+  addEventListener("load", layoutTech);
+  addEventListener("resize", layoutTech);
+  desktop.addEventListener("change", layoutTech);
+  requestAnimationFrame(frame);
 })();
