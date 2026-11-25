@@ -955,3 +955,8 @@ html[data-cor="dourado"] { --destaque: #C4A15D; }
 .quote { display: flex; flex-direction: column; justify-content: center; gap: 14px; min-height: 150px; margin: 0; padding: clamp(20px, 2.4vw, 32px); border-radius: 22px; background: var(--ink-2); border: 1px solid var(--line); }
 .quote blockquote { margin: 0; font-family: var(--f-logo); font-size: clamp(22px, 2.2vw, 30px); line-height: 1.15; color: var(--off); }
 .quote figcaption { font-weight: 600; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--cotton); }
+
+/* Cursos: a foto é em pé e aparece inteira (sem cortar as cabeças) */
+#cursos .mapping__media { justify-self: center; width: min(100%, 440px); }
+#cursos .mapping__media figure { aspect-ratio: 739 / 1235; max-height: 80vh; margin-inline: auto; }
+#cursos .mapping__media img { object-position: 50% 0; }
