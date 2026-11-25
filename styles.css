@@ -960,3 +960,4 @@ html[data-cor="dourado"] { --destaque: #C4A15D; }
 #cursos .mapping__media { justify-self: center; width: min(100%, 440px); }
 #cursos .mapping__media figure { aspect-ratio: 739 / 1235; max-height: 80vh; margin-inline: auto; }
 #cursos .mapping__media img { object-position: 50% 0; }
+.quote figcaption small { display: block; margin-top: 6px; font-size: 12px; letter-spacing: .12em; font-weight: 500; color: var(--destaque); }
