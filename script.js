@@ -2,18 +2,10 @@
   const WHATSAPP = "5511992490643";
   const WA_MSG = "Oi, Mara! Vim pelo site e quero fazer meu agendamento ✨";
 
-  // Valores da Mara: troque null pelo número (app = aplicação, m15 = até 15 dias, m21 = 16 a 21 dias).
-  const TECH = [
-    { name: "Fio a fio clássico", app: null, m15: null, m21: null },
-    { name: "Efeito molhado", app: null, m15: null, m21: null },
-    { name: "Mega volume", app: null, m15: null, m21: null },
-  ];
-  const SERVICES = [
-    { name: "Cílios", desc: "Um olhar mais presente, no efeito que combina com você." },
-    { name: "Sobrancelhas", desc: "Um desenho que valoriza os seus traços e emoldura o rosto." },
-    { name: "Maquiagem", desc: "Uma produção completa, do seu jeito e pra sua ocasião." },
-    { name: "Micropigmentação", desc: "Definição que acompanha você no dia a dia. Começa com uma avaliação." },
-  ];
+  // Dados do catálogo: vêm do build.py (uma fonte só), embutidos no HTML.
+  const ITENS = JSON.parse(document.getElementById("dados").textContent);
+  const ITEM = Object.fromEntries(ITENS.map(i => [i.id, i]));
+  const D1 = 16, D2 = 22; // manutenção até 16 dias; de 17 a 22 dias
 
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -21,7 +13,7 @@
   const desktop = matchMedia("(min-width: 901px)");
   const cursorOn = matchMedia("(hover: hover) and (pointer: fine)").matches && !reduced;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  const brl = v => v == null ? "R$ a definir" : `R$ ${v},00`;
+  const brl = v => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   const waLink = msg => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
 
   /* ---------- links de WhatsApp ---------- */
@@ -130,6 +122,7 @@
     if (e.key !== "Escape") return;
     if (menu.classList.contains("is-open")) setMenu(false);
     closeLightbox();
+    closeSheet();
   });
 
   const navLinks = $$(".nav__links a");
@@ -170,38 +163,62 @@
   /* ---------- calculadora de manutenção ---------- */
   const calc = $(".calc");
   if (calc) {
-    const chips = $$(".calc__chips button", calc), range = $(".calc__range", calc);
+    const MODELOS = ITENS.filter(i => i.m1 != null); // só quem tem manutenção
+    const DMAX = 30;
+    const pct = d => ((d - 1) / (DMAX - 1)) * 100;
+    const chipsBox = $(".calc__chips", calc), range = $(".calc__range", calc), scale = $(".calc__scale", calc);
     const daysOut = $(".calc__days", calc), result = $(".calc__result", calc);
     const badge = $(".calc__badge", calc), priceEl = $(".calc__price", calc), tip = $(".calc__tip", calc), cta = $(".calc__cta", calc);
+    chipsBox.innerHTML = MODELOS.map((m, n) => `<button type="button" role="radio" aria-checked="${n === 0}" data-tech="${n}">${m.nome}</button>`).join("");
+    range.style.background = `linear-gradient(90deg, var(--pink) 0 ${pct(D1)}%, var(--cotton) ${pct(D1)}% ${pct(D2)}%, var(--wine) ${pct(D2)}% 100%)`;
+    scale.innerHTML = `<span>1</span><span style="left:${pct(D1)}%">${D1}</span><span style="left:${pct(D2)}%">${D2}</span><span style="left:100%">${DMAX}</span>`;
+    const chips = $$("button", chipsBox);
     let tech = 0, shown = null, countRaf = 0;
 
-    const countTo = to => {
+    const paint = (n, from) => {
+      priceEl.classList.remove("is-text");
+      priceEl.innerHTML = (from ? '<small class="calc__from">a partir de</small>' : "") + brl(n);
+    };
+    const countTo = (to, from) => {
       cancelAnimationFrame(countRaf);
-      if (reduced || to == null || shown == null) { shown = to; priceEl.textContent = brl(to); return; }
-      const from = shown, start = performance.now();
+      if (reduced || shown == null) { shown = to; paint(to, from); return; }
+      const start = shown, t0 = performance.now();
       const step = now => {
-        const p = clamp((now - start) / 450, 0, 1);
-        shown = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
-        priceEl.textContent = brl(shown);
+        const p = clamp((now - t0) / 450, 0, 1);
+        shown = Math.round(start + (to - start) * (1 - Math.pow(1 - p, 3)));
+        paint(shown, from);
         if (p < 1) countRaf = requestAnimationFrame(step);
       };
       countRaf = requestAnimationFrame(step);
     };
 
     const update = () => {
-      const d = +range.value, t = TECH[tech];
+      const d = +range.value, t = MODELOS[tech];
       daysOut.textContent = d === 1 ? "1 dia" : `${d} dias`;
-      let zone, price;
-      if (d <= 15) { zone = "best"; price = t.m15; badge.textContent = "Manutenção até 15 dias"; tip.textContent = "Você está no melhor prazo! ✨"; }
-      else if (d <= 21) { zone = "mid"; price = t.m21; badge.textContent = "Manutenção 16 a 21 dias"; tip.textContent = "Ainda dá tempo de fazer manutenção, corre!"; }
-      else { zone = "new"; price = t.app; badge.textContent = "Aplicação nova"; tip.textContent = "Depois de 21 dias o valor é de aplicação nova."; }
-      if (result.dataset.zone !== zone) {
-        priceEl.classList.remove("is-bump"); void priceEl.offsetWidth; priceEl.classList.add("is-bump");
+      let zone;
+      if (d <= D1) {
+        zone = "best";
+        badge.textContent = `Manutenção até ${D1} dias`;
+        tip.textContent = "Você está no melhor prazo! ✨";
+        countTo(t.m1, false);
+      } else if (d <= D2) {
+        zone = "mid";
+        badge.textContent = `Manutenção de ${D1 + 1} a ${D2} dias`;
+        tip.textContent = t.m2_from ? "Valor pode aumentar conforme avaliação técnica." : "Ainda dá tempo de fazer manutenção, corre!";
+        countTo(t.m2, !!t.m2_from);
+      } else {
+        zone = "new";
+        badge.textContent = `Mais de ${D2} dias`;
+        tip.textContent = "Passou do prazo da manutenção. Chame no WhatsApp pra avaliar o seu caso.";
+        cancelAnimationFrame(countRaf); shown = null;
+        priceEl.classList.add("is-text"); priceEl.textContent = "Fale com a Mara";
       }
+      if (result.dataset.zone !== zone) { priceEl.classList.remove("is-bump"); void priceEl.offsetWidth; priceEl.classList.add("is-bump"); }
       result.dataset.zone = zone;
-      if (price !== shown || price == null) countTo(price);
-      const what = zone === "new" ? `uma aplicação nova de cílios: ${t.name}` : `a manutenção dos cílios: ${t.name} (aplicação há ${d} ${d === 1 ? "dia" : "dias"})`;
-      setWa(cta, `Oi, Mara! Quero agendar ${what} ✨`);
+      const dias = `${d} ${d === 1 ? "dia" : "dias"}`;
+      setWa(cta, zone === "new"
+        ? `Oi, Mara! Meus cílios (${t.nome}) têm ${dias} de aplicação. Quero saber sobre a manutenção ✨`
+        : `Oi, Mara! Quero agendar a manutenção dos cílios: ${t.nome} (aplicação há ${dias}) ✨`);
     };
     chips.forEach(c => c.addEventListener("click", () => {
       tech = +c.dataset.tech;
@@ -212,14 +229,41 @@
     update();
   }
 
-  /* ---------- quiz: qual técnica é a sua? ---------- */
+  /* ---------- quiz: qual cílios combina com você? ---------- */
+  // Cada resposta dá pontos aos modelos. Os pesos seguem o "Perfil ideal" que a Mara escreveu.
+  // Empate: vence quem vem primeiro em ORDEM. (Testado nas 256 combinações: todos os 9 aparecem, de 10% a 12% cada.)
+  const ORDEM = ["beleza-natural", "efeito-molhado", "volume-brasileiro", "volume-pink", "volume-diva", "volume-glamour", "fox-eyes", "mega-glamour", "lash-lift"];
+  const BN = "beleza-natural", EM = "efeito-molhado", VB = "volume-brasileiro", VP = "volume-pink", VD = "volume-diva", VG = "volume-glamour", FX = "fox-eyes", MG = "mega-glamour", LL = "lash-lift";
+  const QUIZ = [
+    { q: "Como você quer o seu olhar?", opts: [
+      ["Natural, quase sem perceber", { [BN]: 3, [LL]: 4, [VB]: 3, [VD]: 1 }],
+      ["Marcado, mas prático", { [EM]: 2, [VB]: 2, [VP]: 1 }],
+      ["Mais longo e alongado", { [VP]: 4, [FX]: 2, [VD]: 1 }],
+      ["Cheio e impactante", { [MG]: 3, [VG]: 2, [FX]: 1 }]] },
+    { q: "Como é a sua rotina?", opts: [
+      ["Corrida, preciso de praticidade", { [VB]: 4, [EM]: 3, [BN]: 2, [LL]: 2 }],
+      ["Trabalho e gosto de me cuidar", { [VG]: 2, [VD]: 3, [VP]: 1 }],
+      ["Gosto de me produzir e de eventos", { [VG]: 2, [MG]: 2, [FX]: 1 }],
+      ["Adoro estar na moda e chamar atenção", { [FX]: 3, [MG]: 2 }]] },
+    { q: "E os seus cílios naturais?", opts: [
+      ["São retos e quero curvar, sem colocar fios", { [LL]: 4 }],
+      ["São bons, só quero realçar", { [BN]: 2, [EM]: 1, [VD]: 1 }],
+      ["São curtos ou falhados, quero preencher", { [VB]: 1, [VD]: 2, [VG]: 1, [MG]: 1 }],
+      ["Não sei, quero que a Mara me indique", {}]] },
+    { q: "Qual sensação você quer?", opts: [
+      ["Leve e delicada", { [BN]: 2, [VD]: 2, [VP]: 1, [VB]: 1 }],
+      ["Elegante e sofisticada", { [VG]: 3, [VP]: 1, [VD]: 1 }],
+      ["Estilosa e cheia de atitude", { [FX]: 3, [MG]: 2 }],
+      ["Brilho de quem acabou de passar rímel", { [EM]: 3, [BN]: 1 }]] },
+  ];
+  const vencedor = respostas => {
+    const pts = {};
+    respostas.forEach((a, q) => Object.entries(QUIZ[q].opts[a][1]).forEach(([k, v]) => (pts[k] = (pts[k] || 0) + v)));
+    return ORDEM.reduce((melhor, k) => ((pts[k] || 0) > (pts[melhor] || 0) ? k : melhor), ORDEM[0]);
+  };
+
   const quiz = $(".quiz__card");
   if (quiz) {
-    const QUESTIONS = [
-      { q: "O que você quer realçar?", opts: [["Os cílios", 0], ["As sobrancelhas", 1], ["O rosto todo", 2]] },
-      { q: "Quanto tempo quer que dure?", opts: [["Só pra uma ocasião", 2], ["Algumas semanas", 0], ["O máximo possível", 3]] },
-      { q: "Como é o seu dia a dia?", opts: [["Corrido, quero acordar pronta", 3], ["Amo me produzir", 2], ["Gosto do natural", 1]] },
-    ];
     const stage = $(".quiz__stage", quiz), bar = $(".quiz__bar span", quiz), count = $(".quiz__count", quiz);
     let step = 0, picks = [];
 
@@ -237,11 +281,11 @@
     };
 
     const renderQuestion = () => {
-      const { q, opts } = QUESTIONS[step];
-      count.innerHTML = `Pergunta <b>${step + 1}</b> de ${QUESTIONS.length}`;
-      bar.style.width = `${(step / QUESTIONS.length) * 100}%`;
-      swap(`<h3 class="quiz__q">${q}</h3><div class="quiz__opts">${opts.map(([label, v], i) =>
-        `<button class="quiz__opt" data-v="${v}"><i>${"ABCD"[i]}</i>${label}</button>`).join("")}</div>`);
+      const { q, opts } = QUIZ[step];
+      count.innerHTML = `Pergunta <b>${step + 1}</b> de ${QUIZ.length}`;
+      bar.style.width = `${(step / QUIZ.length) * 100}%`;
+      swap(`<h3 class="quiz__q">${q}</h3><div class="quiz__opts">${opts.map(([label], i) =>
+        `<button type="button" class="quiz__opt" data-v="${i}"><i>${"ABCD"[i]}</i>${label}</button>`).join("")}</div>`);
     };
 
     const burst = origin => {
@@ -263,22 +307,21 @@
     };
 
     const renderResult = () => {
-      const votes = [0, 0, 0, 0];
-      picks.forEach((v, i) => (votes[v] += i ? 1 : 2));
-      const best = picks[0] === 1 && votes[3] === 2 ? 3 : votes.indexOf(Math.max(...votes));
-      const t = SERVICES[best];
+      const t = ITEM[vencedor(picks)];
       count.innerHTML = "Resultado";
       bar.style.width = "100%";
-      swap(`<div class="quiz__result">
-          <div class="tcard__fan">${makeFan(5)}</div>
+      const foto = t.thumb ? `<figure class="quiz__photo"><img src="${t.thumb}" alt="${t.nome}" width="640" height="800"></figure>` : "";
+      swap(`<div class="quiz__result">${foto}<div class="quiz__txt">
           <p class="note">combina com você...</p>
-          <h3 class="quiz__name">${t.name}</h3>
-          <p class="quiz__desc">${t.desc}</p>
+          <h3 class="quiz__name">${t.nome}</h3>
+          <p class="quiz__fio">${t.tag || ""}</p>
+          <p class="quiz__desc"><b>Perfil ideal:</b> ${t.perfil}</p>
+          <p class="quiz__price">${t.app != null ? "aplicação" : "valor"} <strong>${brl(t.app ?? t.valor)}</strong></p>
           <div class="quiz__actions">
-            <a class="tag" href="${waLink(`Oi, Mara! Fiz o teste no site e deu ${t.name}. Quero agendar ✨`)}" target="_blank" rel="noopener">Quero agendar!</a>
-            <button class="quiz__redo">Refazer teste ↺</button>
-          </div>
-        </div>`);
+            <a class="tag" href="${waLink(`Oi, Mara! Fiz o teste no site e deu ${t.nome}. Quero agendar ✨`)}" target="_blank" rel="noopener">Quero agendar!</a>
+            <button type="button" class="quiz__more" data-open="${t.id}">Ver detalhes</button>
+            <button type="button" class="quiz__redo">Refazer teste ↺</button>
+          </div></div></div>`);
       setTimeout(() => burst($(".quiz__name", quiz) || quiz), reduced ? 0 : 420);
     };
 
@@ -287,13 +330,103 @@
         btn.classList.add("is-picked");
         picks.push(+btn.dataset.v);
         step++;
-        setTimeout(() => (step < QUESTIONS.length ? renderQuestion() : renderResult()), reduced ? 0 : 220);
+        setTimeout(() => (step < QUIZ.length ? renderQuestion() : renderResult()), reduced ? 0 : 220);
       }));
       $(".quiz__redo", stage)?.addEventListener("click", () => { step = 0; picks = []; renderQuestion(); });
       $$(".tag", stage).forEach(enableMagnet);
     }
     renderQuestion();
   }
+
+  /* ---------- ficha do modelo (abre ao tocar em um cartão do catálogo) ---------- */
+  const sheet = $(".sheet"), sPhoto = $(".sheet__photo", sheet), sThumbs = $(".sheet__thumbs", sheet);
+  const sTag = $(".sheet__tag", sheet), sTitle = $(".sheet__title", sheet), sContent = $(".sheet__content", sheet), sCta = $(".sheet__cta", sheet);
+  let sheetId = null, sheetFocus = null;
+  const IC = {
+    bulb: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.5"/></svg>',
+  };
+  const linhaPreco = (nome, valor) => `<div class="prow"><span>${nome}</span><strong>${valor}</strong></div>`;
+  const precosHTML = it => {
+    if (it.app != null) {
+      let h = linhaPreco("Aplicação", brl(it.app));
+      if (it.m1 != null) {
+        h += linhaPreco(`Manutenção até ${D1} dias`, brl(it.m1));
+        h += linhaPreco(`Manutenção de ${D1 + 1} a ${D2} dias`, (it.m2_from ? "a partir de " : "") + brl(it.m2) + (it.m2_from ? "*" : ""));
+        if (it.m2_from) h += '<p class="sheet__note">*Valor pode aumentar conforme avaliação técnica.</p>';
+      } else if (it.manut) h += `<p class="sheet__note">${it.manut}</p>`;
+      return h;
+    }
+    return linhaPreco("Valor", (it.a_partir ? "a partir de " : "") + brl(it.valor));
+  };
+  const mostrarFoto = (it, n) => {
+    const f = it.fotos[n];
+    sPhoto.innerHTML = f ? `<img src="${f.src}" alt="${f.alt}"${f.pos ? ` style="object-position:${f.pos}"` : ""}>` : `<span class="vaga"><b>Foto em breve</b><small>${it.nome}</small></span>`;
+    sThumbs.hidden = it.fotos.length < 2;
+    sThumbs.innerHTML = it.fotos.length < 2 ? "" : it.fotos.map((x, i) =>
+      `<button type="button" data-foto="${i}" aria-label="Ver foto ${i + 1}${x.label ? ": " + x.label : ""}" aria-pressed="${i === n}"><img src="${x.src}" alt="">${x.label ? `<span>${x.label}</span>` : ""}</button>`).join("");
+  };
+  const abrirFicha = (id, origem) => {
+    const it = ITEM[id];
+    if (!it) return;
+    sheetId = id;
+    if (origem) sheetFocus = origem;
+    sTag.textContent = it.tag || (it.tipo === "cilios" ? "Cílios" : "Serviço");
+    sTitle.textContent = it.nome;
+    const meta = [];
+    if (it.durab) meta.push(`<span>${IC.clock}Durabilidade: ${it.durab}</span>`);
+    if (it.retoque) meta.push(`<span>${IC.check}${it.retoque}</span>`);
+    if (it.brown) meta.push(`<span>${IC.check}Disponível também na versão Brown (marrom)</span>`);
+    sContent.innerHTML =
+      (it.desc ? `<p class="sheet__desc">${it.desc}</p>` : '<p class="pend">Descrição em breve</p>') +
+      (meta.length ? `<p class="sheet__meta">${meta.join("")}</p>` : "") +
+      (it.perfil ? `<div class="sheet__profile"><b>${IC.bulb}Perfil ideal</b><p>${it.perfil}</p></div>` : "") +
+      `<div class="sheet__prices">${precosHTML(it)}</div>`;
+    mostrarFoto(it, 0);
+    setWa(sCta, `Oi, Mara! Vim pelo site e quero agendar: ${it.nome} ✨`);
+    if (sheet.hidden) {
+      sheet.hidden = false;
+      lockScroll(true);
+      requestAnimationFrame(() => sheet.classList.add("is-open"));
+      $(".sheet__close", sheet).focus({ preventScroll: true });
+    }
+    $(".sheet__panel", sheet).scrollTop = 0;
+  };
+  function closeSheet() {
+    if (sheet.hidden) return;
+    sheet.classList.remove("is-open");
+    setTimeout(() => { sheet.hidden = true; }, 300);
+    lockScroll(false);
+    sheetFocus?.focus({ preventScroll: true });
+  }
+  const passo = d => {
+    const grupo = ITENS.filter(i => i.tipo === ITEM[sheetId].tipo);
+    const n = (grupo.findIndex(i => i.id === sheetId) + d + grupo.length) % grupo.length;
+    abrirFicha(grupo[n].id);
+  };
+  document.addEventListener("click", e => {
+    const o = e.target.closest("[data-open]");
+    if (o) { e.preventDefault(); abrirFicha(o.dataset.open, o); }
+  });
+  sThumbs.addEventListener("click", e => {
+    const b = e.target.closest("[data-foto]");
+    if (b) mostrarFoto(ITEM[sheetId], +b.dataset.foto);
+  });
+  $$(".sheet__nav button", sheet).forEach(b => b.addEventListener("click", () => passo(+b.dataset.step)));
+  $(".sheet__close", sheet).addEventListener("click", closeSheet);
+  sheet.addEventListener("click", e => { if (e.target === sheet) closeSheet(); });
+  sheet.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") passo(1);
+    else if (e.key === "ArrowLeft") passo(-1);
+    else if (e.key === "Tab") {
+      const f = $$("button, a[href]", sheet).filter(el => !el.hidden && el.offsetParent !== null);
+      if (!f.length) return;
+      const a = f[0], z = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
+      else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
+    }
+  });
 
   /* ---------- lightbox ---------- */
   const lb = $(".lightbox"), lbImg = $("img", lb);
@@ -360,21 +493,6 @@
     $$(".tcard:not(.tcard--cta)").forEach(c => tilt(c, 12, -10));
     tilt($(".hero__media"), 8);
   }
-
-  /* ---------- técnicas: scroll horizontal fixado (PC) ---------- */
-  const tech = $(".tech"), track = $(".tech__track"), viewport = $(".tech__viewport");
-  let techDist = 0;
-  const layoutTech = () => {
-    if (desktop.matches && !reduced) {
-      techDist = Math.max(0, track.scrollWidth - viewport.clientWidth);
-      tech.style.height = innerHeight + techDist + "px";
-    } else {
-      techDist = 0;
-      tech.style.height = "";
-      track.style.transform = "";
-    }
-    lenis?.resize();
-  };
 
   /* ---------- loop de animação ---------- */
   const progress = $(".progress span"), fab = $(".fab");
@@ -444,19 +562,9 @@
           scrubWords.forEach((w, i) => w.classList.toggle("is-lit", i < lit));
         }
       }
-      if (techDist) {
-        const r = tech.getBoundingClientRect();
-        const p = clamp(-r.top / techDist, 0, 1);
-        track.style.transform = `translate3d(${(-p * techDist).toFixed(1)}px, 0, 0)`;
-      }
     }
     requestAnimationFrame(frame);
   }
 
-  layoutTech();
-  document.fonts?.ready.then(layoutTech);
-  addEventListener("load", layoutTech);
-  addEventListener("resize", layoutTech);
-  desktop.addEventListener("change", layoutTech);
   requestAnimationFrame(frame);
 })();
