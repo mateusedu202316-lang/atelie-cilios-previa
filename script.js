@@ -340,12 +340,14 @@
 
   /* ---------- ficha do modelo (abre ao tocar em um cartão do catálogo) ---------- */
   const sheet = $(".sheet"), sPhoto = $(".sheet__photo", sheet), sThumbs = $(".sheet__thumbs", sheet);
-  const sTag = $(".sheet__tag", sheet), sTitle = $(".sheet__title", sheet), sContent = $(".sheet__content", sheet), sCta = $(".sheet__cta", sheet);
+  const sScroll = $(".sheet__scroll", sheet), sTag = $(".sheet__tag", sheet), sTitle = $(".sheet__title", sheet), sContent = $(".sheet__content", sheet), sCta = $(".sheet__cta", sheet);
   let sheetId = null, sheetFocus = null;
   const IC = {
     bulb: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/></svg>',
     clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 9.5"/></svg>',
+    hourglass: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z"/><path d="M12 10v4.5M12 17.4v.1"/></svg>',
   };
   const linhaPreco = (nome, valor) => `<div class="prow"><span>${nome}</span><strong>${valor}</strong></div>`;
   const precosHTML = it => {
@@ -355,6 +357,7 @@
         h += linhaPreco(`Manutenção até ${D1} dias`, brl(it.m1));
         h += linhaPreco(`Manutenção de ${D1 + 1} a ${D2} dias`, (it.m2_from ? "a partir de " : "") + brl(it.m2) + (it.m2_from ? "*" : ""));
         if (it.m2_from) h += '<p class="sheet__note">*Valor pode aumentar conforme avaliação técnica.</p>';
+        if (it.nota_manut) h += `<p class="sheet__note">${it.nota_manut}</p>`;
       } else if (it.manut) h += `<p class="sheet__note">${it.manut}</p>`;
       return h;
     }
@@ -375,12 +378,14 @@
     sTag.textContent = it.tag || (it.tipo === "cilios" ? "Cílios" : "Serviço");
     sTitle.textContent = it.nome;
     const meta = [];
+    if (it.tempo) meta.push(`<span>${IC.hourglass}Tempo de aplicação: ${it.tempo}</span>`);
     if (it.durab) meta.push(`<span>${IC.clock}Durabilidade: ${it.durab}</span>`);
     if (it.retoque) meta.push(`<span>${IC.check}${it.retoque}</span>`);
     if (it.brown) meta.push(`<span>${IC.check}Disponível também na versão Brown (marrom)</span>`);
     sContent.innerHTML =
       (it.desc ? `<p class="sheet__desc">${it.desc}</p>` : '<p class="pend">Descrição em breve</p>') +
       (meta.length ? `<p class="sheet__meta">${meta.join("")}</p>` : "") +
+      (it.atencao ? `<p class="sheet__alert">${IC.alert}<span><b>Atenção:</b> ${it.atencao}</span></p>` : "") +
       (it.perfil ? `<div class="sheet__profile"><b>${IC.bulb}Perfil ideal</b><p>${it.perfil}</p></div>` : "") +
       `<div class="sheet__prices">${precosHTML(it)}</div>`;
     mostrarFoto(it, 0);
@@ -392,6 +397,7 @@
       $(".sheet__close", sheet).focus({ preventScroll: true });
     }
     $(".sheet__panel", sheet).scrollTop = 0;
+    sScroll.scrollTop = 0;
   };
   function closeSheet() {
     if (sheet.hidden) return;
@@ -415,7 +421,7 @@
   });
   $$(".sheet__nav button", sheet).forEach(b => b.addEventListener("click", () => passo(+b.dataset.step)));
   $(".sheet__close", sheet).addEventListener("click", closeSheet);
-  sheet.addEventListener("click", e => { if (e.target === sheet) closeSheet(); });
+  sheet.addEventListener("click", e => { if (e.target === sheet || e.target === sScroll) closeSheet(); });
   sheet.addEventListener("keydown", e => {
     if (e.key === "ArrowRight") passo(1);
     else if (e.key === "ArrowLeft") passo(-1);
