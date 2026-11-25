@@ -942,3 +942,5 @@ html[data-cor="dourado"] { --destaque: #C4A15D; }
 .contact__hours { align-items: flex-start !important; line-height: 1.35; }
 .contact__hours svg { margin-top: 2px; }
 .contact b { font-weight: 700; color: var(--cotton); margin-right: 6px; }
+
+.prow--sub { margin-top: 22px; }
